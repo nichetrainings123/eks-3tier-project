@@ -1,0 +1,234 @@
+#############################################
+# Namespace
+#############################################
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: training
+---
+#############################################
+# StorageClass (AWS EBS CSI Driver - GP3)
+#############################################
+apiVersion: storage.k8s.io/v1
+kind: StorageClass
+metadata:
+  name: gp3
+provisioner: ebs.csi.aws.com
+parameters:
+  type: gp3
+allowVolumeExpansion: true
+volumeBindingMode: WaitForFirstConsumer
+---
+#############################################
+# PostgreSQL Secret
+#############################################
+apiVersion: v1
+kind: Secret
+metadata:
+  name: postgres-secret
+  namespace: training
+type: Opaque
+stringData:
+  POSTGRES_DB: trainingdb
+  POSTGRES_USER: admin
+  POSTGRES_PASSWORD: Password@123
+---
+#############################################
+# PostgreSQL StatefulSet (PVC Included)
+#############################################
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: postgres
+  namespace: training
+spec:
+  serviceName: postgres
+  replicas: 1
+
+  selector:
+    matchLabels:
+      app: postgres
+
+  template:
+    metadata:
+      labels:
+        app: postgres
+
+    spec:
+      containers:
+      - name: postgres
+        image: postgres:16
+
+        ports:
+        - containerPort: 5432
+
+        envFrom:
+        - secretRef:
+            name: postgres-secret
+
+        volumeMounts:
+        - name: postgres-storage
+          mountPath: /var/lib/postgresql/data
+
+        resources:
+          requests:
+            cpu: "250m"
+            memory: "256Mi"
+          limits:
+            cpu: "500m"
+            memory: "512Mi"
+
+  volumeClaimTemplates:
+  - metadata:
+      name: postgres-storage
+
+    spec:
+      accessModes:
+      - ReadWriteOnce
+
+      storageClassName: gp3
+
+      resources:
+        requests:
+          storage: 20Gi
+---
+#############################################
+# PostgreSQL Headless Service
+#############################################
+apiVersion: v1
+kind: Service
+metadata:
+  name: postgres
+  namespace: training
+spec:
+  clusterIP: None
+
+  selector:
+    app: postgres
+
+  ports:
+  - name: postgres
+    port: 5432
+    targetPort: 5432
+---
+#############################################
+# Flask Login Application Deployment
+#############################################
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: login-app
+  namespace: training
+spec:
+  replicas: 3
+
+  selector:
+    matchLabels:
+      app: login-app
+
+  template:
+    metadata:
+      labels:
+        app: login-app
+
+    spec:
+      containers:
+      - name: login-app
+
+        image: <ACCOUNT_ID>.dkr.ecr.us-east-1.amazonaws.com/login-app:v1
+
+        imagePullPolicy: Always
+
+        ports:
+        - containerPort: 5000
+
+        env:
+        - name: DB_HOST
+          value: postgres
+
+        - name: DB_NAME
+          value: trainingdb
+
+        - name: DB_USER
+          value: admin
+
+        - name: DB_PASSWORD
+          value: Password@123
+
+        readinessProbe:
+          httpGet:
+            path: /
+            port: 5000
+          initialDelaySeconds: 10
+          periodSeconds: 10
+
+        livenessProbe:
+          httpGet:
+            path: /
+            port: 5000
+          initialDelaySeconds: 30
+          periodSeconds: 20
+
+        resources:
+          requests:
+            cpu: "250m"
+            memory: "256Mi"
+          limits:
+            cpu: "500m"
+            memory: "512Mi"
+---
+#############################################
+# ClusterIP Service for Flask App
+#############################################
+apiVersion: v1
+kind: Service
+metadata:
+  name: login-service
+  namespace: training
+spec:
+  type: ClusterIP
+
+  selector:
+    app: login-app
+
+  ports:
+  - port: 80
+    targetPort: 5000
+    protocol: TCP
+---
+#############################################
+# AWS ALB Ingress
+#############################################
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: login-ingress
+  namespace: training
+
+  annotations:
+    kubernetes.io/ingress.class: alb
+
+    alb.ingress.kubernetes.io/scheme: internet-facing
+
+    alb.ingress.kubernetes.io/target-type: ip
+
+    alb.ingress.kubernetes.io/listen-ports: '[{"HTTP":80}]'
+
+    alb.ingress.kubernetes.io/healthcheck-path: /
+
+    alb.ingress.kubernetes.io/success-codes: "200"
+
+spec:
+  ingressClassName: alb
+
+  rules:
+  - http:
+      paths:
+      - path: /
+        pathType: Prefix
+
+        backend:
+          service:
+            name: login-service
+            port:
+              number: 80
