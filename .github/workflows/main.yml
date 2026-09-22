@@ -18,7 +18,7 @@ jobs:
         uses: actions/checkout@v4
 
       - name: Configure AWS Credentials
-        uses: aws-actions/configure-aws-credentials@v4
+        uses: aws-actions/configure-aws-credentials@v5
         with:
           aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
           aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
@@ -30,16 +30,14 @@ jobs:
 
       - name: Build Docker Image
         run: |
-          docker build \
-            -t $ECR_REPOSITORY:$IMAGE_TAG \
-            ./login-app
+          docker build -t $ECR_REPOSITORY:$IMAGE_TAG ./login-app
 
       - name: Tag Docker Image
         run: |
           docker tag $ECR_REPOSITORY:$IMAGE_TAG \
           $AWS_ACCOUNT_ID.dkr.ecr.$AWS_REGION.amazonaws.com/$ECR_REPOSITORY:$IMAGE_TAG
 
-      - name: Push Docker Image to ECR
+      - name: Push Docker Image to Amazon ECR
         run: |
           docker push \
           $AWS_ACCOUNT_ID.dkr.ecr.$AWS_REGION.amazonaws.com/$ECR_REPOSITORY:$IMAGE_TAG
