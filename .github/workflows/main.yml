@@ -25,19 +25,31 @@ jobs:
           aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
           aws-region: ${{ env.AWS_REGION }}
 
+      - name: Create ECR repository if it does not exist
+        run: |
+          aws ecr describe-repositories \
+            --repository-names "$ECR_REPOSITORY" \
+            --region "$AWS_REGION" >/dev/null 2>&1 || \
+          aws ecr create-repository \
+            --repository-name "$ECR_REPOSITORY" \
+            --region "$AWS_REGION"
+
       - name: Login to Amazon ECR
         uses: aws-actions/amazon-ecr-login@v2
 
       - name: Build Docker Image
         run: |
-          docker build -f ./login-app/Dockerfile -t $ECR_REPOSITORY ./login-app
+          docker build \
+            -f ./login-app/Dockerfile \
+            -t "$ECR_REPOSITORY:latest" \
+            ./login-app
 
       - name: Tag Docker Image
         run: |
-          docker tag $ECR_REPOSITORY:latest \
-          $AWS_ACCOUNT_ID.dkr.ecr.$AWS_REGION.amazonaws.com/$ECR_REPOSITORY:latest
+          docker tag "$ECR_REPOSITORY:latest" \
+            "$AWS_ACCOUNT_ID.dkr.ecr.$AWS_REGION.amazonaws.com/$ECR_REPOSITORY:latest"
 
       - name: Push Docker Image
         run: |
           docker push \
-          $AWS_ACCOUNT_ID.dkr.ecr.$AWS_REGION.amazonaws.com/$ECR_REPOSITORY:latest
+            "$AWS_ACCOUNT_ID.dkr.ecr.$AWS_REGION.amazonaws.com/$ECR_REPOSITORY:latest"
