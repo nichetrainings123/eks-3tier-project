@@ -1,10 +1,3 @@
-name: Build and Push to ECR
-
-on:
-  push:
-    branches:
-      - main
-
 jobs:
   build:
     runs-on: ubuntu-latest
@@ -28,14 +21,15 @@ jobs:
         uses: aws-actions/amazon-ecr-login@v2
 
       - name: Build Docker Image
-        run: docker build -t $ECR_REPOSITORY .
+        run: |
+          docker build -f ./login-app/Dockerfile -t "$ECR_REPOSITORY" ./login-app
 
       - name: Tag Docker Image
         run: |
-          docker tag $ECR_REPOSITORY:latest \
-          $AWS_ACCOUNT_ID.dkr.ecr.$AWS_REGION.amazonaws.com/$ECR_REPOSITORY:latest
+          docker tag "$ECR_REPOSITORY:latest" \
+            "$AWS_ACCOUNT_ID.dkr.ecr.$AWS_REGION.amazonaws.com/$ECR_REPOSITORY:latest"
 
       - name: Push Docker Image
         run: |
           docker push \
-          $AWS_ACCOUNT_ID.dkr.ecr.$AWS_REGION.amazonaws.com/$ECR_REPOSITORY:latest
+            "$AWS_ACCOUNT_ID.dkr.ecr.$AWS_REGION.amazonaws.com/$ECR_REPOSITORY:latest"
