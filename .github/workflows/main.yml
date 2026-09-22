@@ -1,4 +1,4 @@
-name: Docker Build and Push
+name: Build and Push Docker Image to Amazon ECR
 
 on:
   workflow_dispatch:
@@ -6,35 +6,50 @@ on:
       image_tag:
         description: "Docker Image Tag"
         required: true
-        default: "latest"
+        default: "v1"
+
+env:
+  AWS_REGION: us-east-1
+  AWS_ACCOUNT_ID: 797894062399
+  ECR_REPOSITORY: labevening-batch
 
 jobs:
-  docker:
-    name: Build and Push Docker Image
+  build-and-push:
     runs-on: ubuntu-latest
 
-    env:
-      IMAGE_NAME: login-app
-
     steps:
-      - name: Checkout Repository
+      - name: Checkout Source Code
         uses: actions/checkout@v4
 
-      - name: Login to Docker Hub
-        uses: docker/login-action@v3
+      # Configure AWS Credentials
+      - name: Configure AWS Credentials
+        uses: aws-actions/configure-aws-credentials@v4
         with:
-          username: ${{ secrets.DOCKER_USERNAME }}
-          password: ${{ secrets.DOCKER_PASSWORD }}
+          awsaccesskeyid: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          awssecretaccesskey: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: ${{ env.AWS_REGION }}
 
+      # Login to Amazon ECR
+      - name: Login to Amazon ECR
+        id: login-ecr
+        uses: aws-actions/amazon-ecr-login@v2
+
+      # Build Docker Image
       - name: Build Docker Image
         run: |
-          docker build -t ${{ secrets.DOCKER_USERNAME }}/${{ env.IMAGE_NAME }}:${{ github.event.inputs.image_tag }} ./login-app
+          docker build \
+            -t $AWS_ACCOUNT_ID.dkr.ecr.$AWS_REGION.amazonaws.com/$ECR_REPOSITORY:${{ github.event.inputs.image_tag }} \
+            ./login-app
 
-      - name: Push Docker Image
+      # Push Docker Image
+      - name: Push Docker Image to ECR
         run: |
-          docker push ${{ secrets.DOCKER_USERNAME }}/${{ env.IMAGE_NAME }}:${{ github.event.inputs.image_tag }}
+          docker push \
+            $AWS_ACCOUNT_ID.dkr.ecr.$AWS_REGION.amazonaws.com/$ECR_REPOSITORY:${{ github.event.inputs.image_tag }}
 
-      - name: Image Details
+      # Display Image URI
+      - name: Display Image URI
         run: |
-          echo "Docker Image Pushed Successfully"
-          echo "Image: ${{ secrets.DOCKER_USERNAME }}/${{ env.IMAGE_NAME }}:${{ github.event.inputs.image_tag }}"
+          echo "Image pushed successfully."
+          echo "Image URI:"
+          echo "$AWS_ACCOUNT_ID.dkr.ecr.$AWS_REGION.amazonaws.com/$ECR_REPOSITORY:${{ github.event.inputs.image_tag }}"
