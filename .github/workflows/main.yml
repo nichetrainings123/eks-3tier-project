@@ -1,12 +1,7 @@
-name: Build and Push Docker Image to Amazon ECR
+name: Build and Push to Amazon ECR
 
 on:
   workflow_dispatch:
-    inputs:
-      image_tag:
-        description: "Docker Image Tag"
-        required: true
-        default: "v1"
 
 env:
   AWS_REGION: us-east-1
@@ -14,42 +9,28 @@ env:
   ECR_REPOSITORY: labevening-batch
 
 jobs:
-  build-and-push:
+  build:
     runs-on: ubuntu-latest
 
     steps:
-      - name: Checkout Source Code
+      - name: Checkout Repository
         uses: actions/checkout@v4
 
-      # Configure AWS Credentials
       - name: Configure AWS Credentials
         uses: aws-actions/configure-aws-credentials@v4
         with:
-          awsaccesskeyid: ${{ secrets.AWS_ACCESS_KEY_ID }}
-          awssecretaccesskey: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
-          aws-region: ${{ env.AWS_REGION }}
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: us-east-1
 
-      # Login to Amazon ECR
       - name: Login to Amazon ECR
         id: login-ecr
         uses: aws-actions/amazon-ecr-login@v2
 
-      # Build Docker Image
       - name: Build Docker Image
         run: |
-          docker build \
-            -t $AWS_ACCOUNT_ID.dkr.ecr.$AWS_REGION.amazonaws.com/$ECR_REPOSITORY:${{ github.event.inputs.image_tag }} \
-            ./login-app
+          docker build -t $AWS_ACCOUNT_ID.dkr.ecr.$AWS_REGION.amazonaws.com/$ECR_REPOSITORY:latest ./login-app
 
-      # Push Docker Image
-      - name: Push Docker Image to ECR
+      - name: Push Docker Image
         run: |
-          docker push \
-            $AWS_ACCOUNT_ID.dkr.ecr.$AWS_REGION.amazonaws.com/$ECR_REPOSITORY:${{ github.event.inputs.image_tag }}
-
-      # Display Image URI
-      - name: Display Image URI
-        run: |
-          echo "Image pushed successfully."
-          echo "Image URI:"
-          echo "$AWS_ACCOUNT_ID.dkr.ecr.$AWS_REGION.amazonaws.com/$ECR_REPOSITORY:${{ github.event.inputs.image_tag }}"
+          docker push $AWS_ACCOUNT_ID.dkr.ecr.$AWS_REGION.amazonaws.com/$ECR_REPOSITORY:latest
