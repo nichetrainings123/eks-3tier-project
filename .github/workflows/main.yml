@@ -1,72 +1,40 @@
-name: AWS EKS Terraform Deployment
+name: Docker Build and Push
 
 on:
   workflow_dispatch:
     inputs:
-      action:
-        description: "Terraform Action"
+      image_tag:
+        description: "Docker Image Tag"
         required: true
-        default: "apply"
-        type: choice
-        options:
-          - plan
-          - apply
-          - destroy
-
-      aws_region:
-        description: "AWS Region"
-        required: true
-        default: "us-east-1"
+        default: "latest"
 
 jobs:
-  terraform:
-    name: Terraform Manual Deployment
+  docker:
+    name: Build and Push Docker Image
     runs-on: ubuntu-latest
 
-    permissions:
-      id-token: write
-      contents: read
-
-    defaults:
-      run:
-        working-directory: terraform
-
     env:
-      AWS_REGION: ${{ github.event.inputs.aws_region }}
+      IMAGE_NAME: login-app
 
     steps:
       - name: Checkout Repository
         uses: actions/checkout@v4
 
-      - name: Configure AWS Credentials
-        uses: aws-actions/configure-aws-credentials@v4
+      - name: Login to Docker Hub
+        uses: docker/login-action@v3
         with:
-          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
-          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
-          aws-region: ${{ env.AWS_REGION }}
+          username: ${{ secrets.DOCKER_USERNAME }}
+          password: ${{ secrets.DOCKER_PASSWORD }}
 
-      - name: Setup Terraform
-        uses: hashicorp/setup-terraform@v3
-        with:
-          terraform_version: 1.13.3
+      - name: Build Docker Image
+        run: |
+          docker build -t ${{ secrets.DOCKER_USERNAME }}/${{ env.IMAGE_NAME }}:${{ github.event.inputs.image_tag }} ./login-app
 
-      - name: Terraform Init
-        run: terraform init
+      - name: Push Docker Image
+        run: |
+          docker push ${{ secrets.DOCKER_USERNAME }}/${{ env.IMAGE_NAME }}:${{ github.event.inputs.image_tag }}
 
-      - name: Terraform Validate
-        run: terraform validate
-
-      - name: Terraform Format Check
-        run: terraform fmt -check
-
-      - name: Terraform Plan
-        if: github.event.inputs.action == 'plan'
-        run: terraform plan
-
-      - name: Terraform Apply
-        if: github.event.inputs.action == 'apply'
-        run: terraform apply -auto-approve
-
-      - name: Terraform Destroy
-        if: github.event.inputs.action == 'destroy'
-        run: terraform destroy -auto-approve
+      - name: Image Details
+        run: |
+          echo "Docker Image Pushed Successfully"
+          echo "Image: ${{ secrets.DOCKER_USERNAME }}/${{ env.IMAGE_NAME }}:${{ github.event.inputs.image_tag }}"
