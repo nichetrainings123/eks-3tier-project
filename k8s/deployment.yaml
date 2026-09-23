@@ -165,7 +165,7 @@ spec:
       containers:
         - name: login-app
 
-          image: 797894062399.dkr.ecr.us-east-1.amazonaws.com/labevening-batch:latest
+          image: 797894062399.dkr.ecr.us-east-1.amazonaws.com/login-app
           imagePullPolicy: Always
 
           ports:
