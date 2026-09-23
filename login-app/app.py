@@ -32,7 +32,7 @@ def home():
 
 @app.route("/register", methods=["POST"])
 def register():
-    username = request.form["username"]
+    username1 = request.form["username"]
     password = request.form["password"]
 
     try:
