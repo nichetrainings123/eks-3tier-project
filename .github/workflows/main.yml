@@ -71,7 +71,7 @@ jobs:
           git config user.name "github-actions"
           git config user.email "github-actions@github.com"
 
-          git add kubernetes/deployment.yaml
+          git add k8s/deployment.yaml
 
           git diff --cached --quiet || git commit -m "Update image to $IMAGE_TAG"
 
