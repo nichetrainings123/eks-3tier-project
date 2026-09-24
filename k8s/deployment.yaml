@@ -78,7 +78,7 @@ spec:
     spec:
       containers:
         - name: postgres
-          image: postgres:16
+          image: 797894062399.dkr.ecr.us-east-1.amazonaws.com/login-app:97038086749bf6a0d36fe8c341ce617d500aae9a
 
           ports:
             - containerPort: 5432
@@ -165,7 +165,7 @@ spec:
       containers:
         - name: login-app
 
-          image: 797894062399.dkr.ecr.us-east-1.amazonaws.com/login-app
+          image: 797894062399.dkr.ecr.us-east-1.amazonaws.com/login-app:97038086749bf6a0d36fe8c341ce617d500aae9a
           imagePullPolicy: Always
 
           ports:
