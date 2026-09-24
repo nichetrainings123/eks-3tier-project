@@ -64,7 +64,7 @@ jobs:
 
       - name: Update Kubernetes Deployment Manifest
         run: |
-          sed -i "s|image:.*|image: $AWS_ACCOUNT_ID.dkr.ecr.$AWS_REGION.amazonaws.com/$ECR_REPOSITORY:$IMAGE_TAG|g" kubernetes/deployment.yaml
+          sed -i "s|image:.*|image: $AWS_ACCOUNT_ID.dkr.ecr.$AWS_REGION.amazonaws.com/$ECR_REPOSITORY:$IMAGE_TAG|g" k8s/deployment.yaml
 
       - name: Commit Updated Deployment YAML
         run: |
