@@ -1,0 +1,62 @@
+apiVersion: apps/v1
+kind: Deployment
+
+metadata:
+  name: login-app
+  namespace: {{ .Values.namespace }}
+
+spec:
+  replicas: {{ .Values.loginApp.replicas }}
+
+  selector:
+    matchLabels:
+      app: login-app
+
+  template:
+    metadata:
+      labels:
+        app: login-app
+
+    spec:
+      containers:
+
+        - name: login-app
+
+          image: "{{ .Values.loginApp.image.repository }}:{{ .Values.loginApp.image.tag }}"
+
+          imagePullPolicy: {{ .Values.loginApp.image.pullPolicy }}
+
+          ports:
+            - containerPort: 5000
+
+          env:
+            - name: DB_HOST
+              value: postgres
+
+            - name: DB_NAME
+              value: {{ .Values.postgres.database | quote }}
+
+            - name: DB_USER
+              value: {{ .Values.postgres.username | quote }}
+
+            - name: DB_PASSWORD
+              value: {{ .Values.postgres.password | quote }}
+
+          readinessProbe:
+            httpGet:
+              path: /
+              port: 5000
+
+            initialDelaySeconds: 10
+            periodSeconds: 10
+
+          livenessProbe:
+            httpGet:
+              path: /
+              port: 5000
+
+            initialDelaySeconds: 30
+            periodSeconds: 20
+
+          resources:
+{{ toYaml .Values.loginApp.resources | indent 12 }}

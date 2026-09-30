@@ -1,0 +1,42 @@
+namespace: training
+
+postgres:
+  image: postgres:16
+  replicas: 1
+
+  database: trainingdb
+  username: admin
+  password: Password@123
+
+  storage:
+    size: 20Gi
+    storageClass: gp3
+
+  resources:
+    requests:
+      cpu: 250m
+      memory: 256Mi
+    limits:
+      cpu: 500m
+      memory: 512Mi
+
+loginApp:
+  replicas: 2
+
+  image:
+    repository: 797894062399.dkr.ecr.us-east-1.amazonaws.com/login-app
+    tag: dadfad5902969eb762c667c8b8c5039820aa70eb
+    pullPolicy: Always
+
+  service:
+    type: LoadBalancer
+    port: 80
+    targetPort: 5000
+
+  resources:
+    requests:
+      cpu: 250m
+      memory: 256Mi
+    limits:
+      cpu: 500m
+      memory: 512Mi
