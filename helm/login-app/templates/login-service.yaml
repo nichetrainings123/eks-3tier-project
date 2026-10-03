@@ -5,6 +5,11 @@ metadata:
   name: login-service
   namespace: {{ .Values.namespace }}
 
+  annotations:
+    service.beta.kubernetes.io/aws-load-balancer-scheme: internal
+    service.beta.kubernetes.io/aws-load-balancer-type: nlb
+    service.beta.kubernetes.io/aws-load-balancer-internal: "true"
+
 spec:
   type: {{ .Values.loginApp.service.type }}
 

@@ -404,6 +404,81 @@ resource "aws_eks_addon" "ebs_csi" {
 }
 
 #############################
+# PUBLIC API GATEWAY
+#############################
+
+resource "aws_security_group" "api_gateway_vpc_link" {
+  name        = "${local.cluster_name}-api-vpc-link-${random_id.suffix.hex}"
+  description = "Allow API Gateway VPC Link egress to the private login NLB"
+  vpc_id      = aws_vpc.eks_vpc.id
+
+  egress {
+    from_port   = 0
+    to_port     = 0
+    protocol    = "-1"
+    cidr_blocks = [local.vpc_cidr]
+  }
+
+  tags = {
+    Name = "${local.cluster_name}-api-vpc-link"
+  }
+}
+
+resource "aws_apigatewayv2_vpc_link" "login" {
+  name               = "${local.cluster_name}-login"
+  security_group_ids = [aws_security_group.api_gateway_vpc_link.id]
+  subnet_ids = [
+    aws_subnet.private1.id,
+    aws_subnet.private2.id
+  ]
+
+  tags = {
+    Name = "${local.cluster_name}-login-vpc-link"
+  }
+}
+
+data "aws_lb" "login" {
+  tags = {
+    "kubernetes.io/service-name" = "training/login-service"
+  }
+}
+
+data "aws_lb_listener" "login" {
+  load_balancer_arn = data.aws_lb.login.arn
+  port              = 80
+}
+
+resource "aws_apigatewayv2_api" "login" {
+  name          = "${local.cluster_name}-login"
+  protocol_type = "HTTP"
+
+  tags = {
+    Name = "${local.cluster_name}-login-api"
+  }
+}
+
+resource "aws_apigatewayv2_integration" "login" {
+  api_id             = aws_apigatewayv2_api.login.id
+  integration_type   = "HTTP_PROXY"
+  integration_method = "ANY"
+  integration_uri    = data.aws_lb_listener.login.arn
+  connection_type    = "VPC_LINK"
+  connection_id      = aws_apigatewayv2_vpc_link.login.id
+}
+
+resource "aws_apigatewayv2_route" "login" {
+  api_id    = aws_apigatewayv2_api.login.id
+  route_key = "$default"
+  target    = "integrations/${aws_apigatewayv2_integration.login.id}"
+}
+
+resource "aws_apigatewayv2_stage" "login" {
+  api_id      = aws_apigatewayv2_api.login.id
+  name        = "$default"
+  auto_deploy = true
+}
+
+#############################
 # OUTPUTS
 #############################
 
@@ -421,4 +496,9 @@ output "configure_kubectl" {
 
 output "oidc_provider" {
   value = aws_iam_openid_connect_provider.oidc.url
+}
+
+output "public_login_url" {
+  description = "Public HTTPS endpoint for the login application"
+  value       = aws_apigatewayv2_api.login.api_endpoint
 }
