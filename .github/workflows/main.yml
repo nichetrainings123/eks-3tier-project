@@ -20,7 +20,6 @@ jobs:
       IMAGE_TAG: ${{ github.sha }}
 
     steps:
-
       # --------------------------------------------------
       # 1. Checkout Repository
       # --------------------------------------------------
@@ -90,16 +89,14 @@ jobs:
             "$AWS_ACCOUNT_ID.dkr.ecr.$AWS_REGION.amazonaws.com/$ECR_REPOSITORY:latest"
 
       # --------------------------------------------------
-      # 8. Update Kubernetes Manifest
+      # 8. Update Helm Chart Values
       # --------------------------------------------------
-      - name: Update Kubernetes Deployment Manifest
+      - name: Update Helm Image Tag
         run: |
-          sed -i \
-            "s|image:.*|image: $AWS_ACCOUNT_ID.dkr.ecr.$AWS_REGION.amazonaws.com/$ECR_REPOSITORY:$IMAGE_TAG|g" \
-            k8s/deployment.yaml
+          sed -i "s|^[[:space:]]*tag: .*|    tag: \"$IMAGE_TAG\"|" helm/login-app/values.yaml
 
-          echo "Updated deployment.yaml:"
-          cat k8s/deployment.yaml
+          echo "Updated values.yaml:"
+          grep -n "tag:" helm/login-app/values.yaml
 
       # --------------------------------------------------
       # 9. Commit and Push Updated Manifest
@@ -109,7 +106,7 @@ jobs:
           git config user.name "github-actions"
           git config user.email "github-actions@github.com"
 
-          git add k8s/deployment.yaml
+          git add helm/login-app/values.yaml
 
           if git diff --cached --quiet; then
             echo "No changes to commit"
@@ -118,11 +115,6 @@ jobs:
 
           git commit -m "Update image to $IMAGE_TAG"
 
-          # Get latest changes from remote
           git fetch origin main
-
-          # Rebase our commit on top of latest main
           git rebase origin/main
-
-          # Push updated branch
           git push origin HEAD:main
