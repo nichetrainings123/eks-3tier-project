@@ -1,9 +1,12 @@
-from flask import Flask, redirect, render_template, request, session
-import psycopg2
 import os
+from contextlib import contextmanager
+
+import psycopg2
+from flask import Flask, redirect, render_template, request, session
 
 app = Flask(__name__)
 app.config["SECRET_KEY"] = os.getenv("FLASK_SECRET_KEY")
+
 
 def get_connection():
     return psycopg2.connect(
@@ -13,17 +16,25 @@ def get_connection():
         password=os.getenv("DB_PASSWORD", "Password@123")
     )
 
-conn = get_connection()
-cur = conn.cursor()
+@contextmanager
+def database_connection():
+    connection = get_connection()
+    try:
+        with connection:
+            yield connection
+    finally:
+        connection.close()
 
-cur.execute("""
-CREATE TABLE IF NOT EXISTS users (
-    id SERIAL PRIMARY KEY,
-    username VARCHAR(100) UNIQUE,
-    password VARCHAR(100)
-);
-""")
-conn.commit()
+
+with database_connection() as connection:
+    with connection.cursor() as cursor:
+        cursor.execute("""
+        CREATE TABLE IF NOT EXISTS users (
+            id SERIAL PRIMARY KEY,
+            username VARCHAR(100) UNIQUE,
+            password VARCHAR(100)
+        );
+        """)
 
 
 @app.route("/")
@@ -33,32 +44,42 @@ def home():
 
 @app.route("/register", methods=["POST"])
 def register():
-    username = request.form["username"]
-    password = request.form["password"]
+    username = request.form.get("username", "").strip()
+    password = request.form.get("password", "")
+    if not username or not password:
+        return "Username and password are required.", 400
 
     try:
-        cur.execute(
-            "INSERT INTO users(username,password) VALUES(%s,%s)",
-            (username, password)
-        )
-        conn.commit()
+        with database_connection() as connection:
+            with connection.cursor() as cursor:
+                cursor.execute(
+                    "INSERT INTO users(username,password) VALUES(%s,%s)",
+                    (username, password)
+                )
         return "Registration Successful!"
-    except Exception:
-        conn.rollback()
-        return "User already exists."
+    except psycopg2.errors.UniqueViolation:
+        return "User already exists.", 409
+    except psycopg2.Error:
+        app.logger.exception("Database error while registering user")
+        return "Registration failed due to a database error. Please try again.", 500
 
 
 @app.route("/login", methods=["POST"])
 def login():
-    username = request.form["username"]
-    password = request.form["password"]
+    username = request.form.get("username", "").strip()
+    password = request.form.get("password", "")
 
-    cur.execute(
-        "SELECT * FROM users WHERE username=%s AND password=%s",
-        (username, password)
-    )
-
-    user = cur.fetchone()
+    try:
+        with database_connection() as connection:
+            with connection.cursor() as cursor:
+                cursor.execute(
+                    "SELECT * FROM users WHERE username=%s AND password=%s",
+                    (username, password)
+                )
+                user = cursor.fetchone()
+    except psycopg2.Error:
+        app.logger.exception("Database error while logging in")
+        return "Login failed due to a database error. Please try again.", 500
 
     if user:
         session["username"] = username
