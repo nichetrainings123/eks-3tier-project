@@ -28,7 +28,7 @@ loginApp:
 
   image:
     repository: 797894062399.dkr.ecr.us-east-1.amazonaws.com/login-app
-    tag: "9c926f06f3d9b2c192d5cc5d25f6ef3166b0849a"
+    tag: "ea6f49b4a98ba74258f4ee0c737b2beb6b79d6d9"
     pullPolicy: Always
 
   service:
@@ -49,7 +49,7 @@ bmiApp:
 
   image:
     repository: 797894062399.dkr.ecr.us-east-1.amazonaws.com/bmi-service
-    tag: "9c926f06f3d9b2c192d5cc5d25f6ef3166b0849a"
+    tag: "ea6f49b4a98ba74258f4ee0c737b2beb6b79d6d9"
     pullPolicy: Always
 
   service:
