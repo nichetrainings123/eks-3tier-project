@@ -25,7 +25,7 @@ loginApp:
 
   image:
     repository: 797894062399.dkr.ecr.us-east-1.amazonaws.com/login-app
-    tag: dadfad5902969eb762c667c8b8c5039820aa70eb
+    tag: "cb63250cafe62a100a7a361a68e92c8ec43e31fc"
     pullPolicy: Always
 
   service:
