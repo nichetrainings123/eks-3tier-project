@@ -4,6 +4,11 @@ moved {
 }
 
 moved {
+  from = module.api_gateway
+  to   = module.api_gateway["prod"]
+}
+
+moved {
   from = aws_vpc.eks_vpc
   to   = module.network.aws_vpc.this
 }
@@ -135,30 +140,30 @@ moved {
 
 moved {
   from = aws_security_group.api_gateway_vpc_link
-  to   = module.api_gateway.aws_security_group.vpc_link
+  to   = module.api_gateway["prod"].aws_security_group.vpc_link
 }
 
 moved {
   from = aws_apigatewayv2_vpc_link.login
-  to   = module.api_gateway.aws_apigatewayv2_vpc_link.this
+  to   = module.api_gateway["prod"].aws_apigatewayv2_vpc_link.this
 }
 
 moved {
   from = aws_apigatewayv2_api.login
-  to   = module.api_gateway.aws_apigatewayv2_api.this
+  to   = module.api_gateway["prod"].aws_apigatewayv2_api.this
 }
 
 moved {
   from = aws_apigatewayv2_integration.login
-  to   = module.api_gateway.aws_apigatewayv2_integration.this
+  to   = module.api_gateway["prod"].aws_apigatewayv2_integration.this
 }
 
 moved {
   from = aws_apigatewayv2_route.login
-  to   = module.api_gateway.aws_apigatewayv2_route.this
+  to   = module.api_gateway["prod"].aws_apigatewayv2_route.this
 }
 
 moved {
   from = aws_apigatewayv2_stage.login
-  to   = module.api_gateway.aws_apigatewayv2_stage.this
+  to   = module.api_gateway["prod"].aws_apigatewayv2_stage.this
 }

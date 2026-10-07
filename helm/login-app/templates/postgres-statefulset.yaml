@@ -45,9 +45,9 @@ spec:
               command:
                 - pg_isready
                 - -U
-                - admin
+                - {{ .Values.postgres.username | quote }}
                 - -d
-                - trainingdb
+                - {{ .Values.postgres.database | quote }}
 
             initialDelaySeconds: 15
             periodSeconds: 10
@@ -57,9 +57,9 @@ spec:
               command:
                 - pg_isready
                 - -U
-                - admin
+                - {{ .Values.postgres.username | quote }}
                 - -d
-                - trainingdb
+                - {{ .Values.postgres.database | quote }}
 
             initialDelaySeconds: 30
             periodSeconds: 20

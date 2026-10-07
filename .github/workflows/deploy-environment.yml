@@ -1,0 +1,100 @@
+name: Reusable environment deployment
+
+on:
+  workflow_call:
+    inputs:
+      environment:
+        description: GitHub Environment and Kubernetes namespace
+        required: true
+        type: string
+
+permissions:
+  contents: read
+  id-token: write
+
+concurrency:
+  group: deploy-${{ inputs.environment }}
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    name: Build and deploy to ${{ inputs.environment }}
+    runs-on: ubuntu-latest
+    environment: ${{ inputs.environment }}
+    defaults:
+      run:
+        shell: bash
+    env:
+      AWS_REGION: ${{ vars.AWS_REGION || 'us-east-1' }}
+      EKS_CLUSTER_NAME: ${{ vars.EKS_CLUSTER_NAME }}
+      POSTGRES_PASSWORD: ${{ secrets.POSTGRES_PASSWORD }}
+      SESSION_SECRET: ${{ secrets.SESSION_SECRET }}
+      DEPLOY_ENVIRONMENT: ${{ inputs.environment }}
+      IMAGE_TAG: ${{ github.sha }}
+
+    steps:
+      - name: Check out source
+        uses: actions/checkout@v4
+
+      - name: Validate deployment configuration
+        run: |
+          test -n "$EKS_CLUSTER_NAME" || { echo "Set EKS_CLUSTER_NAME in the GitHub environment variables."; exit 1; }
+          test -n "$POSTGRES_PASSWORD" || { echo "Set POSTGRES_PASSWORD in the GitHub environment secrets."; exit 1; }
+          test -n "$SESSION_SECRET" || { echo "Set SESSION_SECRET in the GitHub environment secrets."; exit 1; }
+
+      - name: Configure AWS credentials through GitHub OIDC
+        uses: aws-actions/configure-aws-credentials@v5
+        with:
+          role-to-assume: ${{ secrets.AWS_ROLE_ARN }}
+          aws-region: ${{ env.AWS_REGION }}
+
+      - name: Verify ECR repositories exist
+        run: |
+          aws ecr describe-repositories \
+            --repository-names login-app bmi-service \
+            --region "$AWS_REGION" >/dev/null
+
+      - name: Log in to Amazon ECR
+        id: ecr-login
+        uses: aws-actions/amazon-ecr-login@v2
+
+      - name: Build and push application images
+        env:
+          ECR_REGISTRY: ${{ steps.ecr-login.outputs.registry }}
+        run: |
+          docker build \
+            --file ./login-app/Dockerfile \
+            --tag "$ECR_REGISTRY/login-app:$IMAGE_TAG" \
+            ./login-app
+          docker build \
+            --file ./bmi-service/Dockerfile \
+            --tag "$ECR_REGISTRY/bmi-service:$IMAGE_TAG" \
+            ./bmi-service
+          docker push "$ECR_REGISTRY/login-app:$IMAGE_TAG"
+          docker push "$ECR_REGISTRY/bmi-service:$IMAGE_TAG"
+
+      - name: Configure EKS access
+        run: |
+          aws eks update-kubeconfig \
+            --name "$EKS_CLUSTER_NAME" \
+            --region "$AWS_REGION"
+
+      - name: Set up Helm
+        uses: azure/setup-helm@v4
+
+      - name: Deploy Helm release
+        env:
+          ECR_REGISTRY: ${{ steps.ecr-login.outputs.registry }}
+        run: |
+          helm upgrade --install login-app ./helm/login-app \
+            --namespace "$DEPLOY_ENVIRONMENT" \
+            --values "./helm/environments/$DEPLOY_ENVIRONMENT.yaml" \
+            --set-string "loginApp.image.repository=$ECR_REGISTRY/login-app" \
+            --set-string "loginApp.image.tag=$IMAGE_TAG" \
+            --set-string "bmiApp.image.repository=$ECR_REGISTRY/bmi-service" \
+            --set-string "bmiApp.image.tag=$IMAGE_TAG" \
+            --set-string "apiHost=$EKS_CLUSTER_NAME-$DEPLOY_ENVIRONMENT.internal" \
+            --set-string "postgres.password=$POSTGRES_PASSWORD" \
+            --set-string "auth.sessionSecret=$SESSION_SECRET" \
+            --wait \
+            --timeout 10m

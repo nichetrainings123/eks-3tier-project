@@ -25,5 +25,13 @@ output "login_load_balancer_dns_name" {
 
 output "public_login_url" {
   description = "Public HTTPS endpoint for the login application through API Gateway."
-  value       = module.api_gateway.api_endpoint
+  value       = module.api_gateway["prod"].api_endpoint
+}
+
+output "environment_api_endpoints" {
+  description = "Environment-specific API Gateway endpoints."
+  value = {
+    for environment, gateway in module.api_gateway :
+    environment => gateway.api_endpoint
+  }
 }

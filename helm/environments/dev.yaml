@@ -1,0 +1,13 @@
+namespace: dev
+createNamespace: false
+
+postgres:
+  database: devdb
+  storage:
+    size: 8Gi
+
+loginApp:
+  replicas: 1
+
+bmiApp:
+  replicas: 1

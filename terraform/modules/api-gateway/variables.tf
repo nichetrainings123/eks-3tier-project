@@ -2,6 +2,11 @@ variable "name" {
   type = string
 }
 
+variable "api_host" {
+  description = "Host header forwarded to Istio to select the environment gateway."
+  type        = string
+}
+
 variable "random_suffix" {
   type = string
 }

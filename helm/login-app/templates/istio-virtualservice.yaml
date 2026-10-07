@@ -5,7 +5,7 @@ metadata:
   namespace: {{ .Values.namespace }}
 spec:
   hosts:
-    - "*"
+    - {{ .Values.apiHost | quote }}
   gateways:
     - training-gateway
   http:

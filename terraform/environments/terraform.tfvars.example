@@ -1,0 +1,5 @@
+deployment_role_arns = {
+  dev     = "arn:aws:iam::123456789012:role/eks-3tier-github-dev"
+  staging = "arn:aws:iam::123456789012:role/eks-3tier-github-staging"
+  prod    = "arn:aws:iam::123456789012:role/eks-3tier-github-prod"
+}

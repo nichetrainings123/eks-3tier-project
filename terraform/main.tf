@@ -24,6 +24,8 @@ provider "aws" {
 }
 
 locals {
+  deployment_environments = toset(["dev", "staging", "prod"])
+
   common_tags = {
     Project     = var.project_name
     Environment = var.environment
@@ -72,13 +74,18 @@ module "load_balancer" {
 }
 
 module "api_gateway" {
+  for_each = local.deployment_environments
+
   source = "./modules/api-gateway"
 
-  name               = var.cluster_name
+  name               = each.key == "prod" ? var.cluster_name : "${var.cluster_name}-${each.key}"
+  api_host           = "${var.cluster_name}-${each.key}.internal"
   random_suffix      = module.eks.name_suffix
   vpc_id             = module.network.vpc_id
   vpc_cidr           = var.vpc_cidr
   private_subnet_ids = module.network.private_subnet_ids
   nlb_listener_arn   = module.load_balancer.listener_arn
-  tags               = local.common_tags
+  tags = merge(local.common_tags, {
+    Environment = each.key
+  })
 }

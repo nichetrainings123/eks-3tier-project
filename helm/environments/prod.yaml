@@ -1,0 +1,13 @@
+namespace: prod
+createNamespace: false
+
+postgres:
+  database: proddb
+  storage:
+    size: 50Gi
+
+loginApp:
+  replicas: 3
+
+bmiApp:
+  replicas: 3

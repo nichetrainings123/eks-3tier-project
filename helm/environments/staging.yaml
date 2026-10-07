@@ -1,0 +1,11 @@
+namespace: staging
+createNamespace: false
+
+postgres:
+  database: stagingdb
+
+loginApp:
+  replicas: 2
+
+bmiApp:
+  replicas: 2

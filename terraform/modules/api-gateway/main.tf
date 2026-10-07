@@ -41,6 +41,9 @@ resource "aws_apigatewayv2_integration" "this" {
   integration_uri    = var.nlb_listener_arn
   connection_type    = "VPC_LINK"
   connection_id      = aws_apigatewayv2_vpc_link.this.id
+  request_parameters = {
+    "overwrite:header.host" = var.api_host
+  }
 }
 
 resource "aws_apigatewayv2_route" "this" {

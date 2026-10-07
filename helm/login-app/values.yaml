@@ -1,4 +1,6 @@
 namespace: training
+createNamespace: true
+apiHost: "*"
 
 auth:
   sessionSecret: ""
