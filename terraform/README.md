@@ -8,10 +8,71 @@ The AWS infrastructure is split into local, reusable modules:
 - `modules/api-gateway`: API Gateway HTTP API and its private VPC Link.
 - `istio`: a separate Terraform root for Istio's CRDs, control plane, and ingress gateway.
 
-The internal NLB is provisioned by Terraform and forwards to the Istio ingress gateway
-NodePort `30080`. Login and BMI are private ClusterIP services; Istio routes `/` to the
-login service and `/bmi` to the BMI service. Its target health check uses Istio's
-readiness NodePort `30021` and `/healthz/ready`, rather than the application HTTP route.
+The `training` environment uses the original internal NLB and shared Istio ingress
+gateway. Login and BMI are private ClusterIP services; Istio routes `/` to the login
+service and `/bmi` to the BMI service. Its target health check uses Istio's readiness
+NodePort `30021` and `/healthz/ready`, rather than the application HTTP route.
+
+## Dev, test, and production environments
+
+The existing EKS cluster and Istio control plane are shared. A separate Terraform root
+at `terraform/environments` uses Terraform workspaces `dev`, `test`, and `prod` to
+manage one isolated ingress gateway, internal NLB, API Gateway, and VPC Link per
+environment. Each environment's gateway has unique NodePorts and pod selectors, and
+the Helm application release creates its own namespace and PostgreSQL volume.
+Environment URLs are available from that workspace's `public_login_url` output.
+
+The GitHub Actions workflow maps branch pushes as follows:
+
+| Branch | Namespace | Environment URL |
+| --- | --- | --- |
+| `dev` | `dev` | `terraform output -raw public_login_url` in the `dev` workspace |
+| `test` | `test` | `terraform output -raw public_login_url` in the `test` workspace |
+| `prod` | `prod` | `terraform output -raw public_login_url` in the `prod` workspace |
+| `main` | `training` | Existing training endpoint |
+
+To create the isolated infrastructure after the shared EKS cluster and Istio control
+plane are available:
+
+```powershell
+terraform -chdir=terraform/environments init
+terraform -chdir=terraform/environments workspace new dev
+terraform -chdir=terraform/environments plan
+terraform -chdir=terraform/environments apply
+
+terraform -chdir=terraform/environments workspace new test
+terraform -chdir=terraform/environments plan
+terraform -chdir=terraform/environments apply
+
+terraform -chdir=terraform/environments workspace new prod
+terraform -chdir=terraform/environments plan
+terraform -chdir=terraform/environments apply
+```
+
+Seed each namespace once with its corresponding current image tag; later pushes to the
+matching Git branch build both images and deploy that branch's commit SHA automatically:
+
+```powershell
+aws eks update-kubeconfig --region us-east-1 --name training-eks-cluster
+helm upgrade --install login-app .\helm\login-app --namespace dev --create-namespace `
+  --take-ownership --wait --set-string namespace=dev `
+  --set-string gateway.selector=ingressgateway-dev `
+  --set-string postgres.storage.storageClass=gp3-dev `
+  --set loginApp.replicas=1 --set bmiApp.replicas=1
+```
+
+Use the same seed command with namespace, selector, and storage class `test` /
+`ingressgateway-test` / `gp3-test`, then `prod` / `ingressgateway-prod` / `gp3-prod`.
+Each environment needs a unique StorageClass because the chart creates cluster-scoped
+StorageClass resources. The workflow applies one replica per application in these
+environments and retains two ingress gateway replicas. Scale the node group and
+application replicas for production availability as needed.
+
+The environment Terraform root uses local Terraform workspace state. Back it up and
+protect it; do not commit state files. For team use, migrate the root to an encrypted,
+versioned remote backend with state locking before relying on it for production.
+All three PostgreSQL databases currently use the same password, as requested. Use a
+unique secret per environment before exposing production data or handling real users.
 
 ## Deploy
 

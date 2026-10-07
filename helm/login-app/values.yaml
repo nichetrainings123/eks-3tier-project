@@ -1,5 +1,8 @@
 namespace: training
 
+gateway:
+  selector: ingressgateway
+
 auth:
   sessionSecret: ""
 
