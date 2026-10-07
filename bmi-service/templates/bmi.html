@@ -1,0 +1,38 @@
+<!doctype html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>BMI Calculator</title>
+    <style>
+        body { margin: 0; font-family: Arial, Helvetica, sans-serif; background: #0f172a; }
+        .container { box-sizing: border-box; width: min(420px, calc(100% - 32px)); margin: 10vh auto; padding: 30px; border-radius: 12px; background: white; }
+        h1 { color: #eb2535; text-align: center; }
+        label { display: block; margin-top: 16px; color: #334155; }
+        input, button { box-sizing: border-box; width: 100%; padding: 12px; margin-top: 8px; border-radius: 6px; }
+        input { border: 1px solid #cbd5e1; }
+        button { border: 0; background: #2563eb; color: white; font-size: 16px; cursor: pointer; }
+        .result { padding: 12px; border-radius: 6px; background: #eff6ff; text-align: center; }
+        .error { color: #b91c1c; }
+    </style>
+</head>
+<body>
+<main class="container">
+    <h1>BMI Calculator</h1>
+    <p>Welcome, {{ username }}. Enter your measurements to calculate your BMI.</p>
+    <form action="/bmi" method="post">
+        <label for="weight_kg">Weight (kg)</label>
+        <input id="weight_kg" name="weight_kg" type="number" min="0.1" step="any" required>
+        <label for="height_cm">Height (cm)</label>
+        <input id="height_cm" name="height_cm" type="number" min="1" step="any" required>
+        <button type="submit">Calculate BMI</button>
+    </form>
+    {% if error %}
+    <p class="error" role="alert">{{ error }}</p>
+    {% endif %}
+    {% if bmi is not none %}
+    <p class="result">Your BMI is <strong>{{ "%.1f"|format(bmi) }}</strong> ({{ category }}).</p>
+    {% endif %}
+</main>
+</body>
+</html>

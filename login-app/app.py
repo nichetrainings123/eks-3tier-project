@@ -1,8 +1,9 @@
-from flask import Flask, render_template, request
+from flask import Flask, redirect, render_template, request, session
 import psycopg2
 import os
 
 app = Flask(__name__)
+app.config["SECRET_KEY"] = os.getenv("FLASK_SECRET_KEY")
 
 def get_connection():
     return psycopg2.connect(
@@ -32,7 +33,7 @@ def home():
 
 @app.route("/register", methods=["POST"])
 def register():
-    username1 = request.form["username"]
+    username = request.form["username"]
     password = request.form["password"]
 
     try:
@@ -60,7 +61,8 @@ def login():
     user = cur.fetchone()
 
     if user:
-        return f"Welcome {username}"
+        session["username"] = username
+        return redirect("/bmi")
 
     return "Invalid Username or Password."
 

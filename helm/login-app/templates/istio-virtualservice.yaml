@@ -1,0 +1,27 @@
+apiVersion: networking.istio.io/v1
+kind: VirtualService
+metadata:
+  name: training-routes
+  namespace: {{ .Values.namespace }}
+spec:
+  hosts:
+    - "*"
+  gateways:
+    - training-gateway
+  http:
+    - match:
+        - uri:
+            prefix: /bmi
+      route:
+        - destination:
+            host: bmi-service.{{ .Values.namespace }}.svc.cluster.local
+            port:
+              number: {{ .Values.bmiApp.service.port }}
+    - match:
+        - uri:
+            prefix: /
+      route:
+        - destination:
+            host: login-service.{{ .Values.namespace }}.svc.cluster.local
+            port:
+              number: {{ .Values.loginApp.service.port }}

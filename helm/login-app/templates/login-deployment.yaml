@@ -42,6 +42,12 @@ spec:
             - name: DB_PASSWORD
               value: {{ .Values.postgres.password | quote }}
 
+            - name: FLASK_SECRET_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: app-auth-secret
+                  key: FLASK_SECRET_KEY
+
           readinessProbe:
             httpGet:
               path: /

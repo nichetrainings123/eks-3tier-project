@@ -1,5 +1,8 @@
 namespace: training
 
+auth:
+  sessionSecret: ""
+
 postgres:
   image: postgres:16
   replicas: 1
@@ -29,7 +32,7 @@ loginApp:
     pullPolicy: Always
 
   service:
-    type: LoadBalancer
+    type: ClusterIP
     port: 80
     targetPort: 5000
 
@@ -37,6 +40,26 @@ loginApp:
     requests:
       cpu: 250m
       memory: 256Mi
+    limits:
+      cpu: 500m
+      memory: 512Mi
+
+bmiApp:
+  replicas: 2
+
+  image:
+    repository: 797894062399.dkr.ecr.us-east-1.amazonaws.com/bmi-service
+    tag: "latest"
+    pullPolicy: Always
+
+  service:
+    port: 80
+    targetPort: 5001
+
+  resources:
+    requests:
+      cpu: 100m
+      memory: 128Mi
     limits:
       cpu: 500m
       memory: 512Mi

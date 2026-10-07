@@ -7,9 +7,9 @@ The AWS infrastructure is split into local, reusable modules:
 - `modules/load-balancer`: private NLB, target group, listener, and managed-node-group attachment.
 - `modules/api-gateway`: API Gateway HTTP API and its private VPC Link.
 
-The login NLB is now provisioned by Terraform. The Helm chart exposes the application as
-NodePort `30080`; the NLB target group forwards to that port on the EKS worker nodes.
-This avoids asking Kubernetes to provision a second load balancer.
+The internal NLB is provisioned by Terraform and forwards to the Istio ingress gateway
+NodePort `30080`. Login and BMI are private ClusterIP services; Istio routes `/` to the
+login service and `/bmi` to the BMI service.
 
 ## Deploy
 
@@ -23,11 +23,20 @@ terraform -chdir=terraform apply
 ```
 
 After applying the infrastructure, configure `kubectl` with the `configure_kubectl`
-output and install/upgrade the application chart:
+output. Install Istio with its ingress gateway as a NodePort service on port `30080`
+(the Terraform NLB target port), then install/upgrade the application chart:
 
 ```powershell
+istioctl install --set profile=default `
+  --set components.ingressGateways[0].k8s.service.type=NodePort `
+  --set components.ingressGateways[0].k8s.service.ports[1].nodePort=30080 -y
 helm upgrade --install login-app .\helm\login-app --namespace training --create-namespace
 ```
+
+The Helm chart labels the `training` namespace for Istio sidecar injection. The Istio
+Gateway and VirtualService send the browser to the BMI service after a successful login;
+the shared, Helm-managed session secret keeps that service behind the login session.
+The chart assumes the Istio CRDs and `istio-ingressgateway` are installed first.
 
 For production, use a shared, encrypted remote Terraform state backend and supply a
 restricted value for `cluster_endpoint_public_access_cidrs`. The default CIDR keeps

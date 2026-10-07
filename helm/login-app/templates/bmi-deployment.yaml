@@ -1,0 +1,42 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: bmi-service
+  namespace: {{ .Values.namespace }}
+spec:
+  replicas: {{ .Values.bmiApp.replicas }}
+  selector:
+    matchLabels:
+      app: bmi-service
+  template:
+    metadata:
+      labels:
+        app: bmi-service
+    spec:
+      containers:
+        - name: bmi-service
+          image: "{{ .Values.bmiApp.image.repository }}:{{ .Values.bmiApp.image.tag }}"
+          imagePullPolicy: {{ .Values.bmiApp.image.pullPolicy }}
+          ports:
+            - name: http
+              containerPort: 5001
+          env:
+            - name: FLASK_SECRET_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: app-auth-secret
+                  key: FLASK_SECRET_KEY
+          readinessProbe:
+            httpGet:
+              path: /healthz
+              port: 5001
+            initialDelaySeconds: 5
+            periodSeconds: 10
+          livenessProbe:
+            httpGet:
+              path: /healthz
+              port: 5001
+            initialDelaySeconds: 15
+            periodSeconds: 20
+          resources:
+{{ toYaml .Values.bmiApp.resources | indent 12 }}

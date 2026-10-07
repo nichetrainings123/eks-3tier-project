@@ -1,6 +1,6 @@
 apiVersion: v2
 name: login-app
-description: Flask Login Application with PostgreSQL on EKS
+description: Login and BMI microservices with PostgreSQL and Istio on EKS
 type: application
 
 version: 1.0.0

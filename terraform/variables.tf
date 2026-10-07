@@ -98,7 +98,7 @@ variable "node_max_size" {
 }
 
 variable "login_node_port" {
-  description = "Kubernetes NodePort served by the login application and registered in the NLB target group."
+  description = "Kubernetes NodePort served by the Istio ingress gateway and registered in the NLB target group."
   type        = number
   default     = 30080
 }
