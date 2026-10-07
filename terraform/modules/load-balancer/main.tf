@@ -1,6 +1,6 @@
 resource "aws_security_group" "this" {
   name        = "${var.name}-login-nlb"
-  description = "Allow private VPC traffic to the login Network Load Balancer"
+  description = "Allow private VPC traffic to the Istio ingress Network Load Balancer"
   vpc_id      = var.vpc_id
 
   ingress {
@@ -12,9 +12,17 @@ resource "aws_security_group" "this" {
   }
 
   egress {
-    description = "Login NodePort to EKS nodes"
+    description = "Istio ingress HTTP NodePort to EKS nodes"
     from_port   = var.node_port
     to_port     = var.node_port
+    protocol    = "tcp"
+    cidr_blocks = [var.vpc_cidr]
+  }
+
+  egress {
+    description = "Istio readiness NodePort to EKS nodes"
+    from_port   = var.health_check_node_port
+    to_port     = var.health_check_node_port
     protocol    = "tcp"
     cidr_blocks = [var.vpc_cidr]
   }
@@ -27,9 +35,20 @@ resource "aws_security_group" "this" {
 resource "aws_vpc_security_group_ingress_rule" "nodes_from_nlb" {
   security_group_id            = var.node_security_group_id
   referenced_security_group_id = aws_security_group.this.id
-  description                  = "Allow login NLB traffic to the Kubernetes NodePort"
+  description                  = "Allow NLB traffic to the Istio ingress HTTP NodePort"
   from_port                    = var.node_port
   to_port                      = var.node_port
+  ip_protocol                  = "tcp"
+
+  tags = var.tags
+}
+
+resource "aws_vpc_security_group_ingress_rule" "nodes_health_from_nlb" {
+  security_group_id            = var.node_security_group_id
+  referenced_security_group_id = aws_security_group.this.id
+  description                  = "Allow NLB health checks to the Istio ingress readiness NodePort"
+  from_port                    = var.health_check_node_port
+  to_port                      = var.health_check_node_port
   ip_protocol                  = "tcp"
 
   tags = var.tags
@@ -60,9 +79,9 @@ resource "aws_lb_target_group" "login" {
   health_check {
     enabled             = true
     protocol            = "HTTP"
-    port                = "traffic-port"
-    path                = "/"
-    matcher             = "200-399"
+    port                = var.health_check_node_port
+    path                = "/healthz/ready"
+    matcher             = "200"
     healthy_threshold   = 3
     unhealthy_threshold = 3
     interval            = 30

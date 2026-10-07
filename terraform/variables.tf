@@ -98,7 +98,23 @@ variable "node_max_size" {
 }
 
 variable "login_node_port" {
-  description = "Kubernetes NodePort served by the Istio ingress gateway and registered in the NLB target group."
+  description = "HTTP NodePort served by the Istio ingress gateway and registered in the NLB target group."
   type        = number
   default     = 30080
+
+  validation {
+    condition     = var.login_node_port >= 30000 && var.login_node_port <= 32767
+    error_message = "The Istio HTTP NodePort must be in the Kubernetes NodePort range (30000-32767)."
+  }
+}
+
+variable "istio_status_node_port" {
+  description = "NodePort used by the Istio ingress gateway readiness health check."
+  type        = number
+  default     = 30021
+
+  validation {
+    condition     = var.istio_status_node_port >= 30000 && var.istio_status_node_port <= 32767
+    error_message = "The Istio status NodePort must be in the Kubernetes NodePort range (30000-32767)."
+  }
 }

@@ -26,6 +26,10 @@ variable "node_port" {
   type = number
 }
 
+variable "health_check_node_port" {
+  type = number
+}
+
 variable "tags" {
   type    = map(string)
   default = {}

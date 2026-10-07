@@ -67,6 +67,7 @@ module "load_balancer" {
   node_group_asg_name    = module.eks.node_group_asg_name
   node_security_group_id = module.eks.cluster_security_group_id
   node_port              = var.login_node_port
+  health_check_node_port = var.istio_status_node_port
   tags                   = local.common_tags
 }
 
