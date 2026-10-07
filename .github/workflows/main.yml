@@ -30,6 +30,16 @@ jobs:
       - name: Checkout Repository
         uses: actions/checkout@v4
 
+      - name: Validate environment variables
+        run: |
+          test -n "$EKS_CLUSTER_NAME" || { echo "Set EKS_CLUSTER_NAME in the GitHub environment variables."; exit 1; }
+          test -n "$POSTGRES_PASSWORD" || { echo "Set POSTGRES_PASSWORD in the GitHub environment secrets."; exit 1; }
+          test -n "$SESSION_SECRET" || { echo "Set SESSION_SECRET in the GitHub environment secrets."; exit 1; }
+        env:
+          EKS_CLUSTER_NAME: ${{ secrets.EKS_CLUSTER_NAME }}
+          POSTGRES_PASSWORD: ${{ secrets.POSTGRES_PASSWORD }}
+          SESSION_SECRET: ${{ secrets.SESSION_SECRET }}
+
       - name: Configure AWS Credentials
         uses: aws-actions/configure-aws-credentials@v5
         with:
@@ -94,7 +104,7 @@ jobs:
         run: |
           aws eks update-kubeconfig \
             --region "$AWS_REGION" \
-            --name training-eks-cluster
+            --name "${{ secrets.EKS_CLUSTER_NAME }}"
 
       - name: Install Helm
         uses: azure/setup-helm@v4
